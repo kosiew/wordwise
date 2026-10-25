@@ -45,19 +45,26 @@ struct ContentView: View {
             }
 
             HStack(spacing: 6) {
-                ForEach(Array(game.secret.word.enumerated()), id: \.offset) { _, letter in
-                    Text(isRevealed ? String(letter).uppercased() : " ")
+                ForEach(Array(game.secret.word.enumerated()), id: \.offset) { position, letter in
+                    let bought = game.revealedPositions.contains(position)
+                    Text(isRevealed || bought ? String(letter).uppercased() : " ")
                         .font(.title2.weight(.bold).monospaced())
+                        .foregroundStyle(bought ? Color.accentColor : .primary)
                         .frame(width: 38, height: 44)
                         .background(.quaternary, in: .rect(cornerRadius: 6))
+                        .overlay {
+                            if bought { RoundedRectangle(cornerRadius: 6).stroke(Color.accentColor, lineWidth: 2) }
+                        }
                 }
             }
             .animation(.spring, value: isRevealed)
+            .animation(.spring, value: game.revealedPositions)
 
             HStack(spacing: 24) {
                 stat("Points available", "\(game.potentialPoints)", tint: .accentColor)
                 stat("Questions left", "\(game.questionsLeft)")
                 stat("Guesses left", "\(game.guessesLeft)")
+                stat("Reveals left", "\(game.revealsLeft)")
             }
         }
         .padding()
@@ -107,7 +114,7 @@ struct ContentView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("I'm thinking of a \(game.secret.word.count)-letter word.").font(.headline)
-            Text("Ask yes/no questions — each costs \(Scoring.questionCost) points. Or guess the word: a wrong guess costs \(Scoring.wrongGuessCost) points and tells you how many letters are in the right spot (●) or in the word but misplaced (○).")
+            Text("Ask yes/no questions — each costs \(Scoring.questionCost) points. Or guess the word: a wrong guess costs \(Scoring.wrongGuessCost) points and tells you how many letters are in the right spot (●) or in the word but misplaced (○). Stuck? Reveal a letter for \(Scoring.revealCost) points.")
                 .foregroundStyle(.secondary)
             Text("Word list: \(game.wordBank.source?.lastPathComponent ?? "built-in") (\(game.wordBank.words.count) words) — change it in the Word List menu")
                 .font(.caption)
@@ -170,6 +177,11 @@ struct ContentView: View {
                     .disabled(!canSubmit)
             }
             HStack {
+                Button("Reveal a Letter (−\(Scoring.revealCost))") { game.revealLetter() }
+                    .buttonStyle(.link)
+                    .disabled(!game.canReveal)
+                    .keyboardShortcut("r")
+                    .help("Shows one hidden letter in its place. Up to \(Scoring.maxReveals(forLength: game.secret.word.count)) per word.")
                 Spacer()
                 Button("Give Up", role: .destructive) { game.giveUp() }
                     .buttonStyle(.link)
@@ -240,6 +252,16 @@ struct TurnRow: View {
                 Text("\(pegs.exact) exact · \(pegs.misplaced) misplaced")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
+            }
+            .padding(10)
+            .background(.background.secondary, in: .rect(cornerRadius: 8))
+
+        case .reveal(_, let position, let letter):
+            HStack(spacing: 12) {
+                Image(systemName: "eye").foregroundStyle(Color.accentColor)
+                Text("Letter \(position + 1) is \(String(letter).uppercased())").fontWeight(.medium)
+                Spacer()
+                Text("−\(Scoring.revealCost) points").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
             .padding(10)
             .background(.background.secondary, in: .rect(cornerRadius: 8))

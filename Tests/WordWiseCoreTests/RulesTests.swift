@@ -136,6 +136,29 @@ import Testing
         #expect(Game(defaults: defaults).wordBank.source == nil)
     }
 
+    @Test func revealingLettersCostsPointsAndIsCapped() {
+        let game = makeGame()  // "tiger": up to 2 reveals
+        game.revealLetter()
+        game.revealLetter()
+        game.revealLetter()  // over the cap, ignored
+
+        #expect(game.revealedPositions.count == 2)
+        #expect(!game.canReveal)
+        #expect(game.potentialPoints == 1000 - 2 * Scoring.revealCost)
+        for case .reveal(_, let position, let letter) in game.turns {
+            #expect(letter == Array("tiger")[position])
+        }
+
+        #expect(game.guess("tiger"))
+        #expect(game.phase == .won(points: 800))
+    }
+
+    @Test func revealCapScalesWithWordLength() {
+        #expect(Scoring.maxReveals(forLength: 3) == 1)
+        #expect(Scoring.maxReveals(forLength: 5) == 2)
+        #expect(Scoring.maxReveals(forLength: 10) == 5)
+    }
+
     @Test func runningOutOfGuessesLoses() {
         let game = makeGame()
         for _ in 0..<Scoring.maxWrongGuesses { game.guess("eagle") }

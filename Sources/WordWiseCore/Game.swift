@@ -4,10 +4,12 @@ import Observation
 public enum Turn: Identifiable, Equatable, Sendable {
     case question(id: UUID = UUID(), text: String, answer: HostAnswer)
     case guess(id: UUID = UUID(), word: String, pegs: Pegs)
+    /// A letter shown for points; `position` is zero-based.
+    case reveal(id: UUID = UUID(), position: Int, letter: Character)
 
     public var id: UUID {
         switch self {
-        case .question(let id, _, _), .guess(let id, _, _): id
+        case .question(let id, _, _), .guess(let id, _, _), .reveal(let id, _, _): id
         }
     }
 }
@@ -67,11 +69,31 @@ public final class Game {
     }
 
     public var potentialPoints: Int {
-        Scoring.potential(questions: questionsAsked, wrongGuesses: wrongGuesses)
+        Scoring.potential(questions: questionsAsked, wrongGuesses: wrongGuesses, reveals: revealedPositions.count)
     }
 
     public var questionsLeft: Int { Scoring.maxQuestions - questionsAsked }
     public var guessesLeft: Int { Scoring.maxWrongGuesses - wrongGuesses }
+
+    /// Zero-based positions of letters the player has paid to see.
+    public var revealedPositions: Set<Int> {
+        Set(turns.compactMap { if case .reveal(_, let position, _) = $0 { position } else { nil } })
+    }
+
+    public var revealsLeft: Int {
+        Scoring.maxReveals(forLength: secret.word.count) - revealedPositions.count
+    }
+
+    public var canReveal: Bool { phase == .playing && revealsLeft > 0 }
+
+    /// Shows one hidden letter, chosen at random, for `Scoring.revealCost` points.
+    public func revealLetter() {
+        guard canReveal else { return }
+        let hidden = (0..<secret.word.count).filter { !revealedPositions.contains($0) }
+        guard let position = hidden.randomElement() else { return }
+        notice = nil
+        turns.append(.reveal(position: position, letter: Array(secret.word)[position]))
+    }
     public var canAsk: Bool { phase == .playing && !isThinking && questionsLeft > 0 }
 
     public func ask(_ raw: String) async {

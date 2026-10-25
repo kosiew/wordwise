@@ -35,13 +35,19 @@ public enum Scoring {
     public static let base = 1000
     public static let questionCost = 50
     public static let wrongGuessCost = 75
+    public static let revealCost = 100
     public static let minimumWinScore = 50
     public static let maxQuestions = 20
     public static let maxWrongGuesses = 6
 
+    /// At most half the letters (but at least one) can be revealed, so a word is never handed over.
+    public static func maxReveals(forLength length: Int) -> Int {
+        max(1, length / 2)
+    }
+
     /// Points the player would earn by solving it right now.
-    public static func potential(questions: Int, wrongGuesses: Int) -> Int {
-        max(minimumWinScore, base - questions * questionCost - wrongGuesses * wrongGuessCost)
+    public static func potential(questions: Int, wrongGuesses: Int, reveals: Int = 0) -> Int {
+        max(minimumWinScore, base - questions * questionCost - wrongGuesses * wrongGuessCost - reveals * revealCost)
     }
 }
 

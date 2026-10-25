@@ -4,6 +4,7 @@ A Mastermind-style secret-word game for macOS. The on-device Apple Foundation Mo
 
 - Ask yes/no questions (−50 points each, up to 20).
 - Guess the word (−75 points per wrong guess, up to 6). Each guess shows Mastermind pegs: ● for a right letter in the right spot, ○ for a right letter in the wrong spot.
+- Reveal a letter in its place (−100 points, ⌘R), up to half the word's letters.
 - If you solve it on your first guess with no questions, you score 1000.
 
 ## Word lists
