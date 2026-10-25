@@ -4,12 +4,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 swift build -c release
-bin="$(swift build -c release --show-bin-path)/WordWise"
+products="$(swift build -c release --show-bin-path)"
 app=build/WordWise.app
 
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
-cp "$bin" "$app/Contents/MacOS/WordWise"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+cp "$products/WordWise" "$app/Contents/MacOS/WordWise"
+# The built-in word list (words.txt) lives in SwiftPM's resource bundle.
+cp -R "$products/WordWise_WordWiseCore.bundle" "$app/Contents/Resources/"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

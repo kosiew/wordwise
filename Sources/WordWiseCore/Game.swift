@@ -28,16 +28,28 @@ public final class Game {
     public private(set) var isLoadingCategory = false
     public var notice: String?
 
+    public private(set) var wordBank: WordBank
     public private(set) var totalScore: Int
     public private(set) var bestScore: Int
 
     @ObservationIgnored private let host: Host
     @ObservationIgnored private let defaults: UserDefaults
 
-    public init(host: Host = Host(), defaults: UserDefaults = .standard, secret: SecretWord? = nil) {
+    /// Uses the word list chosen last time (falling back to the built-in one if that file is gone),
+    /// unless `wordBank` is given.
+    public init(
+        host: Host = Host(),
+        defaults: UserDefaults = .standard,
+        wordBank: WordBank? = nil,
+        secret: SecretWord? = nil
+    ) {
+        let bank = wordBank
+            ?? defaults.url(forKey: "wordListURL").flatMap { try? WordBank(contentsOf: $0) }
+            ?? .builtIn
         self.host = host
         self.defaults = defaults
-        self.secret = secret ?? SecretWord(word: WordBank.random())
+        self.wordBank = bank
+        self.secret = secret ?? SecretWord(word: bank.random())
         self.totalScore = defaults.integer(forKey: "totalScore")
         self.bestScore = defaults.integer(forKey: "bestScore")
         if secret == nil { loadCategory() }
@@ -104,8 +116,22 @@ public final class Game {
         phase = .lost
     }
 
+    /// Switches to the words in `url` and starts a new round. Throws, leaving the current list in place,
+    /// if the file can't be read or has no usable words.
+    public func useWordList(at url: URL) throws {
+        wordBank = try WordBank(contentsOf: url)
+        defaults.set(url, forKey: "wordListURL")
+        newRound()
+    }
+
+    public func useBuiltInWordList() {
+        wordBank = .builtIn
+        defaults.removeObject(forKey: "wordListURL")
+        newRound()
+    }
+
     public func newRound() {
-        secret = SecretWord(word: WordBank.random(excluding: secret.word))
+        secret = SecretWord(word: wordBank.random(excluding: secret.word))
         turns = []
         phase = .playing
         notice = nil

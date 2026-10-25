@@ -17,7 +17,24 @@ struct WordWiseApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("New Round") { game.newRound() }
                     .keyboardShortcut("n")
+                Divider()
+                Button("Open Word List…") { chooseWordList() }
+                    .keyboardShortcut("o")
+                Button("Use Built-in Word List") { game.useBuiltInWordList() }
+                    .disabled(game.wordBank.source == nil)
             }
+        }
+    }
+
+    private func chooseWordList() {
+        let panel = NSOpenPanel()
+        panel.message = "Choose a text file with one word per line."
+        panel.allowedContentTypes = [.plainText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try game.useWordList(at: url)
+        } catch {
+            game.notice = error.localizedDescription
         }
     }
 }

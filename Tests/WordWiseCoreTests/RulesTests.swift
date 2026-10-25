@@ -44,10 +44,28 @@ import Testing
 }
 
 @Suite struct WordBankTests {
-    @Test func thousandUniquePlayableWords() {
-        #expect(WordBank.words.count == 1000)
-        #expect(Set(WordBank.words).count == 1000)
-        #expect(WordBank.words.allSatisfy { $0.count >= 3 && $0.allSatisfy { ("a"..."z").contains($0) } })
+    @Test func builtInListHasThousandUniqueWords() {
+        let words = WordBank.builtIn.words
+        #expect(words.count == 1000)
+        #expect(Set(words).count == 1000)
+    }
+
+    @Test func parsingSkipsCommentsBlanksAndInvalidLines() {
+        let text = "# comment\nTiger\n\n  lion  \ntiger\nox\nice cream\nt-rex\n"
+        #expect(WordBank.parse(text) == ["tiger", "lion"])
+    }
+
+    @Test func loadsSwappedFileAndRejectsEmptyOne() throws {
+        let dir = FileManager.default.temporaryDirectory
+        let good = dir.appending(path: "wordwise-\(UUID()).txt")
+        let empty = dir.appending(path: "wordwise-\(UUID()).txt")
+        try "comet\nplanet\n".write(to: good, atomically: true, encoding: .utf8)
+        try "# nothing here\n".write(to: empty, atomically: true, encoding: .utf8)
+
+        let bank = try WordBank(contentsOf: good)
+        #expect(bank.words == ["comet", "planet"])
+        #expect(bank.source == good)
+        #expect(throws: WordBankError.self) { try WordBank(contentsOf: empty) }
     }
 }
 
@@ -85,6 +103,19 @@ import Testing
         await game.ask("Does it start with t?")
         #expect(game.questionsAsked == 1)
         #expect(game.potentialPoints == 950)
+    }
+
+    @Test func swappingWordListIsRemembered() throws {
+        let defaults = UserDefaults(suiteName: "wordwise-tests-\(UUID())")!
+        let file = FileManager.default.temporaryDirectory.appending(path: "wordwise-\(UUID()).txt")
+        try "comet\n".write(to: file, atomically: true, encoding: .utf8)
+
+        try Game(defaults: defaults, secret: SecretWord(word: "tiger")).useWordList(at: file)
+        let relaunched = Game(defaults: defaults)
+        #expect(relaunched.secret.word == "comet")
+
+        relaunched.useBuiltInWordList()
+        #expect(Game(defaults: defaults).wordBank.source == nil)
     }
 
     @Test func runningOutOfGuessesLoses() {

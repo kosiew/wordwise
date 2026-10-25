@@ -8,7 +8,7 @@ let package = Package(
         .executable(name: "WordWise", targets: ["WordWise"]),
     ],
     targets: [
-        .target(name: "WordWiseCore"),
+        .target(name: "WordWiseCore", resources: [.copy("Resources/words.txt")]),
         .executableTarget(name: "WordWise", dependencies: ["WordWiseCore"]),
         .testTarget(name: "WordWiseCoreTests", dependencies: ["WordWiseCore"]),
     ]
