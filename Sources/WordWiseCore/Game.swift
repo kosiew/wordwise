@@ -25,6 +25,7 @@ public final class Game {
     public private(set) var turns: [Turn] = []
     public private(set) var phase: Phase = .playing
     public private(set) var isThinking = false
+    public private(set) var isLoadingWord = false
     public private(set) var isLoadingCategory = false
     public var notice: String?
 
@@ -32,15 +33,27 @@ public final class Game {
     public private(set) var bestScore: Int
 
     @ObservationIgnored private let host: Host
+    @ObservationIgnored private let source: any WordSource
     @ObservationIgnored private let defaults: UserDefaults
+    /// Words from recent rounds, so a word doesn't come straight back.
+    @ObservationIgnored private var recentWords: [String] = []
+    /// Identifies the current round, so a slow download or hint from an earlier round is ignored.
+    @ObservationIgnored private var round = UUID()
 
-    public init(host: Host = Host(), defaults: UserDefaults = .standard, secret: SecretWord? = nil) {
+    /// Starts a round with `secret` when given (used by tests); otherwise draws one from `source`.
+    public init(
+        host: Host = Host(),
+        source: any WordSource = GistWordSource(),
+        defaults: UserDefaults = .standard,
+        secret: SecretWord? = nil
+    ) {
         self.host = host
+        self.source = source
         self.defaults = defaults
-        self.secret = secret ?? SecretWord(word: WordBank.random())
+        self.secret = secret ?? SecretWord(word: "")
         self.totalScore = defaults.integer(forKey: "totalScore")
         self.bestScore = defaults.integer(forKey: "bestScore")
-        if secret == nil { loadCategory() }
+        if secret == nil { newRound() }
     }
 
     public var questionsAsked: Int {
@@ -57,7 +70,8 @@ public final class Game {
 
     public var questionsLeft: Int { Scoring.maxQuestions - questionsAsked }
     public var guessesLeft: Int { Scoring.maxWrongGuesses - wrongGuesses }
-    public var canAsk: Bool { phase == .playing && !isThinking && questionsLeft > 0 }
+    public var canAsk: Bool { canGuess && !isThinking && questionsLeft > 0 }
+    public var canGuess: Bool { phase == .playing && !isLoadingWord }
 
     public func ask(_ raw: String) async {
         let question = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -77,7 +91,7 @@ public final class Game {
     @discardableResult
     public func guess(_ raw: String) -> Bool {
         let word = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard phase == .playing, !word.isEmpty else { return false }
+        guard canGuess, !word.isEmpty else { return false }
         guard word.allSatisfy(\.isLetter) else {
             notice = "Guesses must be a single word, letters only."
             return false
@@ -100,25 +114,29 @@ public final class Game {
     }
 
     public func giveUp() {
-        guard phase == .playing else { return }
+        guard canGuess else { return }
         phase = .lost
     }
 
     public func newRound() {
-        secret = SecretWord(word: WordBank.random(excluding: secret.word))
+        let round = UUID()
+        self.round = round
+        if !secret.word.isEmpty { recentWords = Array((recentWords + [secret.word]).suffix(50)) }
+        secret = SecretWord(word: "")
         turns = []
         phase = .playing
         notice = nil
-        loadCategory()
-    }
-
-    private func loadCategory() {
-        let word = secret.word
+        isLoadingWord = true
         isLoadingCategory = true
+
         Task {
-            let category = await host.category(for: word)
-            // Ignore a late reply if the player has already moved on to another round.
-            guard secret.word == word else { return }
+            let next = await source.randomWord(excluding: Set(recentWords))
+            guard self.round == round else { return }
+            secret = next
+            isLoadingWord = false
+
+            let category = await host.category(for: next.word)
+            guard self.round == round else { return }
             secret.category = category
             isLoadingCategory = false
         }

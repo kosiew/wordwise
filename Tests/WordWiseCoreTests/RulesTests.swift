@@ -43,11 +43,52 @@ import Testing
     }
 }
 
-@Suite struct WordBankTests {
-    @Test func thousandUniquePlayableWords() {
-        #expect(WordBank.words.count == 1000)
-        #expect(Set(WordBank.words).count == 1000)
-        #expect(WordBank.words.allSatisfy { $0.count >= 3 && $0.allSatisfy { ("a"..."z").contains($0) } })
+@Suite struct WordListTests {
+    @Test func parsesThemeCommentsAndWords() {
+        let list = WordList(parsing: """
+            # WordWise word list
+            # theme: Space
+            Planet
+            comet
+
+            comet
+            ufo-2
+            at
+            """)
+        #expect(list.theme == "Space")
+        #expect(list.words == ["planet", "comet"])
+    }
+
+    @Test func themeIsOptional() {
+        #expect(WordList(parsing: "tiger\nlion").theme == nil)
+    }
+}
+
+@Suite struct GistWordSourceTests {
+    private func tempDirectory() -> URL {
+        FileManager.default.temporaryDirectory.appending(path: "wordwise-tests-\(UUID())", directoryHint: .isDirectory)
+    }
+
+    @Test func fallsBackToBuiltInListWhenOffline() async {
+        let source = GistWordSource(urls: [URL(string: "https://invalid.invalid/list.txt")!], cacheDirectory: tempDirectory())
+        let word = await source.randomWord(excluding: [])
+        #expect(GistWordSource.fallback.words.contains(word.word))
+    }
+
+    @Test func usesCachedCopyWhenDownloadFails() async throws {
+        let url = URL(string: "https://invalid.invalid/kosiew/abc/raw/wordwise-test.txt")!
+        let cache = tempDirectory()
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        try "# theme: Test\nzebra\n".write(to: cache.appending(path: "kosiew-abc-raw-wordwise-test.txt"), atomically: true, encoding: .utf8)
+
+        let word = await GistWordSource(urls: [url], cacheDirectory: cache).randomWord(excluding: [])
+        #expect(word == SecretWord(word: "zebra", theme: "Test"))
+    }
+
+    @Test func avoidsRecentWordsWhenPossible() {
+        let list = WordList(parsing: "tiger\nlion")
+        #expect(GistWordSource.pick(from: list, excluding: ["tiger"])?.word == "lion")
+        #expect(GistWordSource.pick(from: list, excluding: ["tiger", "lion"]) != nil)
     }
 }
 
@@ -87,6 +128,18 @@ import Testing
         #expect(game.potentialPoints == 950)
     }
 
+    @Test func newRoundDrawsFromSource() async throws {
+        struct Fixed: WordSource {
+            func randomWord(excluding recent: Set<String>) async -> SecretWord { SecretWord(word: "comet", theme: "Space") }
+        }
+        let game = Game(source: Fixed(), defaults: UserDefaults(suiteName: "wordwise-tests-\(UUID())")!)
+        #expect(!game.canGuess)
+        while game.isLoadingWord { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(game.secret.word == "comet")
+        #expect(game.secret.theme == "Space")
+        #expect(game.canGuess)
+    }
+
     @Test func runningOutOfGuessesLoses() {
         let game = makeGame()
         for _ in 0..<Scoring.maxWrongGuesses { game.guess("eagle") }
@@ -97,6 +150,15 @@ import Testing
 /// Exercises the real on-device model. Run with `WORDWISE_LIVE=1 swift test`.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["WORDWISE_LIVE"] != nil))
 struct LiveHostTests {
+    @Test func everyGistDownloads() async {
+        let source = GistWordSource(cacheDirectory: FileManager.default.temporaryDirectory.appending(path: "wordwise-live-\(UUID())"))
+        for url in GistWordSource.lists {
+            let list = await source.load(url)
+            print("\(url.lastPathComponent): \(list?.words.count ?? 0) words, theme \(list?.theme ?? "none")")
+            #expect((list?.words.count ?? 0) >= 100)
+        }
+    }
+
     @Test func writesCategoriesWithoutLeaking() async {
         for word in ["giraffe", "kettle", "blizzard", "lighthouse", "dentist", "origami", "pickaxe", "tuxedo", "kangaroo", "rainbow"] {
             let category = await Host().category(for: word)
