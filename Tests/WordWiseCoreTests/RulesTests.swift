@@ -50,6 +50,16 @@ import Testing
         #expect(Set(words).count == 1000)
     }
 
+    @Test func bundledThemedListsAllLoad() throws {
+        let folder = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../wordlists").standardized
+        let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "txt" }
+        #expect(files.count == 10)
+        for file in files {
+            #expect(try WordBank(contentsOf: file).words.count == 100, "\(file.lastPathComponent)")
+        }
+    }
+
     @Test func parsingSkipsCommentsBlanksAndInvalidLines() {
         let text = "# comment\nTiger\n\n  lion  \ntiger\nox\nice cream\nt-rex\n"
         #expect(WordBank.parse(text) == ["tiger", "lion"])
