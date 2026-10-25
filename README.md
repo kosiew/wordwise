@@ -12,7 +12,7 @@ Requires macOS 26+ with Apple Intelligence enabled.
 
 ```sh
 swift run WordWise            # quick launch
-./scripts/make-app.sh         # builds build/WordWise.app
+./scripts/make-app.sh         # builds build/WordWise.app and installs it to /Applications
 ```
 
 ## Test

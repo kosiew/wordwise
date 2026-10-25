@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds a release WordWise.app in ./build that you can double-click or drag to /Applications.
+# Builds a release WordWise.app in ./build and installs it to /Applications.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -27,3 +27,9 @@ cat > "$app/Contents/Info.plist" <<PLIST
 PLIST
 codesign --force --sign - "$app"
 echo "Built $app"
+
+# Replace any installed copy; quit it first so the old binary isn't left running.
+osascript -e 'quit app "WordWise"' 2>/dev/null || true
+rm -rf /Applications/WordWise.app
+cp -R "$app" /Applications/
+echo "Installed /Applications/WordWise.app"
