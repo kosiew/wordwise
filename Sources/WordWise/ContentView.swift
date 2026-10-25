@@ -29,7 +29,13 @@ struct ContentView: View {
     private var header: some View {
         VStack(spacing: 14) {
             HStack {
-                Label(hint, systemImage: "tag")
+                Group {
+                    if game.isLoadingCategory {
+                        Label("Thinking of a hint…", systemImage: "tag")
+                    } else {
+                        Label(game.secret.category ?? "Mystery word", systemImage: "tag")
+                    }
+                }
                 .font(.headline)
                 .foregroundStyle(.secondary)
                 Spacer()
@@ -58,14 +64,6 @@ struct ContentView: View {
     }
 
     private var isRevealed: Bool { game.phase != .playing }
-
-    /// The word list's theme and the model's category, e.g. "Space · Celestial body".
-    private var hint: String {
-        if game.isLoadingWord { return "Picking a word…" }
-        let parts = [game.secret.theme, game.isLoadingCategory ? "thinking of a hint…" : game.secret.category]
-        let hint = parts.compactMap { $0 }.joined(separator: " · ")
-        return hint.isEmpty ? "Mystery word" : hint
-    }
 
     private func stat(_ title: String, _ value: String, tint: Color = .primary) -> some View {
         VStack(spacing: 2) {
@@ -108,7 +106,7 @@ struct ContentView: View {
 
     private var intro: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(game.isLoadingWord ? "Picking a word…" : "I'm thinking of a \(game.secret.word.count)-letter word.").font(.headline)
+            Text("I'm thinking of a \(game.secret.word.count)-letter word.").font(.headline)
             Text("Ask yes/no questions — each costs \(Scoring.questionCost) points. Or guess the word: a wrong guess costs \(Scoring.wrongGuessCost) points and tells you how many letters are in the right spot (●) or in the word but misplaced (○).")
                 .foregroundStyle(.secondary)
             if let reason = Host.unavailabilityReason {
@@ -172,11 +170,11 @@ struct ContentView: View {
                 Spacer()
                 Button("Give Up", role: .destructive) { game.giveUp() }
                     .buttonStyle(.link)
-                    .disabled(!game.canGuess)
+                    .disabled(game.phase != .playing)
             }
         }
         .padding()
-        .disabled(!game.canGuess)
+        .disabled(game.phase != .playing)
     }
 
     private var placeholder: String {
@@ -188,7 +186,7 @@ struct ContentView: View {
 
     private var canSubmit: Bool {
         guard !input.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        return mode == .guess ? game.canGuess : game.canAsk
+        return mode == .guess ? game.phase == .playing : game.canAsk
     }
 
     private func submit() {
