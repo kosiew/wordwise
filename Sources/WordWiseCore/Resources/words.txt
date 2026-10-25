@@ -1,5 +1,5 @@
 # WordWise word list: one word per line (letters only, at least 3).
-# Lines starting with # are comments. Swap in your own file with File ▸ Open Word List…
+# Lines starting with # are comments. Pick another list from the Word List menu.
 tiger
 penguin
 giraffe

@@ -29,6 +29,8 @@ public final class Game {
     public var notice: String?
 
     public private(set) var wordBank: WordBank
+    public private(set) var bundledLists: [WordListFile] = []
+    public private(set) var userLists: [WordListFile] = []
     public private(set) var totalScore: Int
     public private(set) var bestScore: Int
 
@@ -52,6 +54,7 @@ public final class Game {
         self.secret = secret ?? SecretWord(word: bank.random())
         self.totalScore = defaults.integer(forKey: "totalScore")
         self.bestScore = defaults.integer(forKey: "bestScore")
+        refreshWordLists()
         if secret == nil { loadCategory() }
     }
 
@@ -122,6 +125,16 @@ public final class Game {
         wordBank = try WordBank(contentsOf: url)
         defaults.set(url, forKey: "wordListURL")
         newRound()
+    }
+
+    /// Rescans the word-list folders, so files added since launch show up in the menu.
+    public func refreshWordLists() {
+        bundledLists = WordListLibrary.scan(WordListLibrary.bundledFolder)
+        userLists = WordListLibrary.scan(WordListLibrary.userFolder)
+    }
+
+    public func isUsing(_ list: WordListFile) -> Bool {
+        wordBank.source?.standardizedFileURL == list.url.standardizedFileURL
     }
 
     public func useBuiltInWordList() {

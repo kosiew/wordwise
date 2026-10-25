@@ -109,7 +109,7 @@ struct ContentView: View {
             Text("I'm thinking of a \(game.secret.word.count)-letter word.").font(.headline)
             Text("Ask yes/no questions — each costs \(Scoring.questionCost) points. Or guess the word: a wrong guess costs \(Scoring.wrongGuessCost) points and tells you how many letters are in the right spot (●) or in the word but misplaced (○).")
                 .foregroundStyle(.secondary)
-            Text("Word list: \(game.wordBank.source?.lastPathComponent ?? "built-in") (\(game.wordBank.words.count) words) — change it with File ▸ Open Word List…")
+            Text("Word list: \(game.wordBank.source?.lastPathComponent ?? "built-in") (\(game.wordBank.words.count) words) — change it in the Word List menu")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
             if let reason = Host.unavailabilityReason {

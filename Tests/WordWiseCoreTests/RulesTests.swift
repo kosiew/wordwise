@@ -51,13 +51,21 @@ import Testing
     }
 
     @Test func bundledThemedListsAllLoad() throws {
-        let folder = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../wordlists").standardized
-        let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "txt" }
-        #expect(files.count == 10)
-        for file in files {
-            #expect(try WordBank(contentsOf: file).words.count == 100, "\(file.lastPathComponent)")
+        let lists = WordListLibrary.scan(WordListLibrary.bundledFolder)
+        #expect(lists.map(\.name) == ["Fantasy", "Farm", "Garden", "Kitchen", "Music", "Ocean", "Science", "Space", "Sports", "Travel"])
+        for list in lists {
+            #expect(try WordBank(contentsOf: list.url).words.count == 100, "\(list.name)")
         }
+    }
+
+    @Test func scanFindsNewlyAddedTextFiles() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "wordwise-\(UUID())", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        #expect(WordListLibrary.scan(folder).isEmpty)
+
+        try "comet\n".write(to: folder.appending(path: "board-games.txt"), atomically: true, encoding: .utf8)
+        try "ignored".write(to: folder.appending(path: "notes.md"), atomically: true, encoding: .utf8)
+        #expect(WordListLibrary.scan(folder).map(\.name) == ["Board Games"])
     }
 
     @Test func parsingSkipsCommentsBlanksAndInvalidLines() {

@@ -1,5 +1,5 @@
 # WordWise word list: Garden. One word per line; lines starting with # are comments.
-# Load it with File ▸ Open Word List…
+# Pick it from the Word List menu.
 rose
 tulip
 daisy

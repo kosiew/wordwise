@@ -69,3 +69,37 @@ public struct WordBank: Equatable, Sendable {
         return (pool.isEmpty ? words : pool).randomElement()!
     }
 }
+
+/// A word-list file offered in the Word List menu.
+public struct WordListFile: Identifiable, Hashable, Sendable {
+    public let url: URL
+    /// The file name as a title, e.g. "fantasy.txt" → "Fantasy", "board-games.txt" → "Board Games".
+    public var name: String {
+        url.deletingPathExtension().lastPathComponent
+            .replacing("-", with: " ").replacing("_", with: " ")
+            .capitalized
+    }
+    public var id: URL { url }
+
+    public init(url: URL) {
+        self.url = url
+    }
+}
+
+/// Finds the `.txt` word lists the app ships with and the ones the player has added.
+public enum WordListLibrary {
+    /// Lists packaged with the app (`Resources/wordlists`).
+    public static let bundledFolder = Bundle.module.url(forResource: "wordlists", withExtension: nil)!
+
+    /// Drop `.txt` files here to add lists without rebuilding the app.
+    public static let userFolder = URL.applicationSupportDirectory
+        .appending(path: "WordWise/Lists", directoryHint: .isDirectory)
+
+    public static func scan(_ folder: URL) -> [WordListFile] {
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        return files
+            .filter { $0.pathExtension.lowercased() == "txt" }
+            .map(WordListFile.init)
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+}

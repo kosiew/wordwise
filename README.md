@@ -8,9 +8,14 @@ A Mastermind-style secret-word game for macOS. The on-device Apple Foundation Mo
 
 ## Word lists
 
-The built-in words are in `Sources/WordWiseCore/Resources/words.txt`: one word per line, letters only, at least 3 letters. Lines starting with `#` are comments. To play with a different list, choose **File ▸ Open Word List…** (⌘O) and pick any text file in the same format. The game remembers your choice across launches, and **File ▸ Use Built-in Word List** switches back.
+Choose a list from the **Word List** menu:
 
-The `wordlists/` folder has 10 themed lists of 100 words each, ready to open: Space, Ocean, Kitchen, Sports, Music, Fantasy & myth, Garden, Science, Travel and Farm.
+- **Built-in:** 1000 general words, from `Sources/WordWiseCore/Resources/words.txt`.
+- **Themed lists:** every `.txt` file in `Sources/WordWiseCore/Resources/wordlists/`. Ten come with the game: Fantasy, Farm, Garden, Kitchen, Music, Ocean, Science, Space, Sports and Travel. Add a file there and rebuild, and it appears in the menu.
+- **Your own lists:** every `.txt` file in `~/Library/Application Support/WordWise/Lists`. **Show My Word Lists Folder** opens it. New files appear the next time you switch back to the app, with no rebuild.
+- **Open Other…** (⌘O) loads a list from anywhere else.
+
+A file's name becomes its menu title, so `board-games.txt` shows as "Board Games". Each file has one word per line (letters only, at least 3), and lines starting with `#` are comments. The game remembers the list you picked across launches.
 
 Requires macOS 26+ with Apple Intelligence enabled.
 
