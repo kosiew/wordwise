@@ -55,6 +55,13 @@ struct ContentView: View {
                         .overlay {
                             if bought { RoundedRectangle(cornerRadius: 6).stroke(Color.accentColor, lineWidth: 2) }
                         }
+                        .overlay(alignment: .topLeading) {
+                            Text("\(position + 1)")
+                                .font(.system(size: 9).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
+                                .padding(.top, 2)
+                        }
                 }
             }
             .animation(.spring, value: isRevealed)
