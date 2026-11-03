@@ -47,11 +47,21 @@ struct ContentView: View {
             HStack(spacing: 6) {
                 ForEach(Array(game.secret.word.enumerated()), id: \.offset) { position, letter in
                     let bought = game.revealedPositions.contains(position)
+                    let vowel = game.vowelPositions?.contains(position) == true
                     Text(isRevealed || bought ? String(letter).uppercased() : " ")
                         .font(.title2.weight(.bold).monospaced())
                         .foregroundStyle(bought ? Color.accentColor : .primary)
                         .frame(width: 38, height: 44)
                         .background(.quaternary, in: .rect(cornerRadius: 6))
+                        .background(vowel ? Color.orange.opacity(0.25) : .clear, in: .rect(cornerRadius: 6))
+                        .overlay(alignment: .bottom) {
+                            if vowel {
+                                Text("vowel")
+                                    .font(.system(size: 8).weight(.semibold))
+                                    .foregroundStyle(.orange)
+                                    .padding(.bottom, 2)
+                            }
+                        }
                         .overlay {
                             if bought { RoundedRectangle(cornerRadius: 6).stroke(Color.accentColor, lineWidth: 2) }
                         }
@@ -66,6 +76,7 @@ struct ContentView: View {
             }
             .animation(.spring, value: isRevealed)
             .animation(.spring, value: game.revealedPositions)
+            .animation(.spring, value: game.vowelPositions)
 
             HStack(spacing: 24) {
                 stat("Points available", "\(game.potentialPoints)", tint: .accentColor)
@@ -121,7 +132,7 @@ struct ContentView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("I'm thinking of a \(game.secret.word.count)-letter word.").font(.headline)
-            Text("Ask yes/no questions — each costs \(Scoring.questionCost) points. Or guess the word: a wrong guess costs \(Scoring.wrongGuessCost) points and tells you how many letters are in the right spot (●) or in the word but misplaced (○). Stuck? Reveal a letter for \(Scoring.revealCost) points.")
+            Text("Ask yes/no questions — each costs \(Scoring.questionCost) points. Or guess the word: a wrong guess costs \(Scoring.wrongGuessCost) points and tells you how many letters are in the right spot (●) or in the word but misplaced (○). Stuck? Reveal a letter for \(Scoring.revealCost) points, or see where the vowels are for \(Scoring.vowelRevealCost).")
                 .foregroundStyle(.secondary)
             Text("Word list: \(game.wordBank.source?.lastPathComponent ?? "built-in") (\(game.wordBank.words.count) words) — change it in the Word List menu")
                 .font(.caption)
@@ -189,6 +200,11 @@ struct ContentView: View {
                     .disabled(!game.canReveal)
                     .keyboardShortcut("r")
                     .help("Shows one hidden letter in its place. Up to \(Scoring.maxReveals(forLength: game.secret.word.count)) per word.")
+                Button("Reveal Vowel Positions (−\(Scoring.vowelRevealCost))") { game.revealVowels() }
+                    .buttonStyle(.link)
+                    .disabled(!game.canRevealVowels)
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                    .help("Marks which boxes hold a vowel (A, E, I, O, U) without saying which. Once per word.")
                 Spacer()
                 Button("Give Up", role: .destructive) { game.giveUp() }
                     .buttonStyle(.link)
@@ -272,6 +288,24 @@ struct TurnRow: View {
             }
             .padding(10)
             .background(.background.secondary, in: .rect(cornerRadius: 8))
+
+        case .vowels(_, let positions):
+            HStack(spacing: 12) {
+                Image(systemName: "character.textbox").foregroundStyle(.orange)
+                Text(vowelSummary(positions)).fontWeight(.medium)
+                Spacer()
+                Text("−\(Scoring.vowelRevealCost) points").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            .padding(10)
+            .background(.background.secondary, in: .rect(cornerRadius: 8))
+        }
+    }
+
+    private func vowelSummary(_ positions: [Int]) -> String {
+        switch positions.count {
+        case 0: "No vowels in this word"
+        case 1: "The vowel is at position \(positions[0] + 1)"
+        default: "Vowels are at positions " + positions.map { "\($0 + 1)" }.formatted(.list(type: .and))
         }
     }
 

@@ -36,6 +36,7 @@ public enum Scoring {
     public static let questionCost = 50
     public static let wrongGuessCost = 75
     public static let revealCost = 100
+    public static let vowelRevealCost = 75
     public static let minimumWinScore = 50
     public static let maxQuestions = 20
     public static let maxWrongGuesses = 6
@@ -45,9 +46,16 @@ public enum Scoring {
         max(1, length / 2)
     }
 
+    /// Letters counted as vowels when revealing vowel positions (`y` is not one).
+    public static let vowels: Set<Character> = ["a", "e", "i", "o", "u"]
+
     /// Points the player would earn by solving it right now.
-    public static func potential(questions: Int, wrongGuesses: Int, reveals: Int = 0) -> Int {
-        max(minimumWinScore, base - questions * questionCost - wrongGuesses * wrongGuessCost - reveals * revealCost)
+    public static func potential(questions: Int, wrongGuesses: Int, reveals: Int = 0, vowelsRevealed: Bool = false) -> Int {
+        max(
+            minimumWinScore,
+            base - questions * questionCost - wrongGuesses * wrongGuessCost - reveals * revealCost
+                - (vowelsRevealed ? vowelRevealCost : 0)
+        )
     }
 }
 

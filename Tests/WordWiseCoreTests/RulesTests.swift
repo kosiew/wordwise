@@ -153,6 +153,21 @@ import Testing
         #expect(game.phase == .won(points: 800))
     }
 
+    @Test func revealingVowelPositionsCostsPointsOnce() {
+        let game = makeGame()  // "tiger": vowels at 1 and 3
+        #expect(game.vowelPositions == nil)
+        game.revealVowels()
+        game.revealVowels()  // already bought, ignored
+
+        #expect(game.vowelPositions == [1, 3])
+        #expect(!game.canRevealVowels)
+        #expect(game.turns.count == 1)
+        #expect(game.potentialPoints == 1000 - Scoring.vowelRevealCost)
+
+        game.revealLetter()
+        #expect(game.potentialPoints == 1000 - Scoring.vowelRevealCost - Scoring.revealCost)
+    }
+
     @Test func revealCapScalesWithWordLength() {
         #expect(Scoring.maxReveals(forLength: 3) == 1)
         #expect(Scoring.maxReveals(forLength: 5) == 2)

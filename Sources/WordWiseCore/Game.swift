@@ -6,10 +6,12 @@ public enum Turn: Identifiable, Equatable, Sendable {
     case guess(id: UUID = UUID(), word: String, pegs: Pegs)
     /// A letter shown for points; `position` is zero-based.
     case reveal(id: UUID = UUID(), position: Int, letter: Character)
+    /// Which zero-based positions hold vowels, without saying which vowels.
+    case vowels(id: UUID = UUID(), positions: [Int])
 
     public var id: UUID {
         switch self {
-        case .question(let id, _, _), .guess(let id, _, _), .reveal(let id, _, _): id
+        case .question(let id, _, _), .guess(let id, _, _), .reveal(let id, _, _), .vowels(let id, _): id
         }
     }
 }
@@ -69,7 +71,8 @@ public final class Game {
     }
 
     public var potentialPoints: Int {
-        Scoring.potential(questions: questionsAsked, wrongGuesses: wrongGuesses, reveals: revealedPositions.count)
+        Scoring.potential(questions: questionsAsked, wrongGuesses: wrongGuesses, reveals: revealedPositions.count,
+                           vowelsRevealed: vowelPositions != nil)
     }
 
     public var questionsLeft: Int { Scoring.maxQuestions - questionsAsked }
@@ -94,6 +97,23 @@ public final class Game {
         notice = nil
         turns.append(.reveal(position: position, letter: Array(secret.word)[position]))
     }
+
+    /// Positions of the secret's vowels, or nil until the player buys them.
+    public var vowelPositions: Set<Int>? {
+        for case .vowels(_, let positions) in turns { return Set(positions) }
+        return nil
+    }
+
+    public var canRevealVowels: Bool { phase == .playing && vowelPositions == nil }
+
+    /// Marks every vowel's position, once per word, for `Scoring.vowelRevealCost` points.
+    public func revealVowels() {
+        guard canRevealVowels else { return }
+        notice = nil
+        let positions = secret.word.enumerated().filter { Scoring.vowels.contains($0.element) }.map(\.offset)
+        turns.append(.vowels(positions: positions))
+    }
+
     public var canAsk: Bool { phase == .playing && !isThinking && questionsLeft > 0 }
 
     public func ask(_ raw: String) async {
